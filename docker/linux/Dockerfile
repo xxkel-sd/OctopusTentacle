@@ -4,7 +4,29 @@ ARG BUILD_NUMBER
 ARG BUILD_DATE
 
 RUN apt-get update && \
-    apt-get install -y curl sudo dos2unix jq && \
+    apt-get install -y --no-install-recommends \
+        apt-transport-https \
+        ca-certificates \
+        curl \
+        gnupg \
+        lsb-release \
+        && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian \
+  $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        containerd.io \
+        docker-ce \
+        docker-ce-cli \
+        dos2unix \
+        jq \
+        sudo \
+        && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -12,15 +34,8 @@ EXPOSE 10933
 
 WORKDIR /tmp
 
-COPY docker/linux/install-scripts/* /install-scripts/
-RUN chmod +x /install-scripts/*.sh
-
 COPY docker/linux/scripts/* /scripts/
 RUN chmod +x /scripts/*.sh
-
-# Install Docker daemon and CLI
-COPY docker/linux/scripts/dockerd-entrypoint.sh /usr/local/bin/
-RUN /install-scripts/install-docker.sh
 
 # Install Tentacle
 COPY _artifacts/deb/tentacle_${BUILD_NUMBER}_amd64.deb /tmp/
